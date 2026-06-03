@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เกมต่อจิ๊กซอว์ผังงาน (Flowchart Jigsaw)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
+
     <style>
         * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
         body { background-color: #f0f4f8; color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; }
@@ -30,7 +35,14 @@
         .choices-container { background: #fdf2e9; padding: 20px; border-radius: 12px; border: 2px dashed #e67e22; margin-bottom: 30px; min-height: 80px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
         
         /* สไตล์ของบล็อกที่ลากได้ */
-        .block { background: #e67e22; color: white; padding: 10px 16px; border-radius: 6px; cursor: grab; font-size: 14px; user-select: none; box-shadow: 0 3px 6px rgba(230,126,34,0.4); font-weight: 600; transition: transform 0.1s; text-align: center;}
+        .block { 
+            background: #e67e22; color: white; padding: 10px 16px; border-radius: 6px; 
+            cursor: grab; font-size: 14px; user-select: none; 
+            box-shadow: 0 3px 6px rgba(230,126,34,0.4); font-weight: 600; 
+            transition: transform 0.1s; text-align: center;
+            /* 📱 ป้องกันมือถือเข้าใจผิดว่าการใช้นิ้วลากบล็อก คือการเลื่อนหน้าจอปกติ */
+            touch-action: none; 
+        }
         .block:active { cursor: grabbing; transform: scale(0.95); }
         
         /* -------------------------------------
@@ -90,20 +102,10 @@
         .fc-dz-small:has(.block) { border-style: solid; background: #fdf2e9; border-color: #e67e22; }
 
         /* --- สไตล์สำหรับตอนเฉลยคำตอบ (Show Solution) --- */
-        .fc-dropzone .block.correct-ans {
-            background: #2ecc71 !important;
-            color: #fff !important;
-            border-radius: 6px;
-        }
+        .fc-dropzone .block.correct-ans { background: #2ecc71 !important; color: #fff !important; border-radius: 6px; }
         .fc-dropzone .block.wrong-ans {
-            background: #e74c3c !important;
-            color: #fff !important;
-            border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            line-height: 1.2;
-            padding: 5px;
+            background: #e74c3c !important; color: #fff !important; border-radius: 6px;
+            display: flex; flex-direction: column; justify-content: center; line-height: 1.2; padding: 5px;
         }
         .wrong-ans s { font-size: 11px; opacity: 0.8; font-weight: normal; }
         .wrong-ans .sol-text { font-size: 13px; font-weight: bold; margin-top: 3px; color: #ffeaa7; }
@@ -172,6 +174,11 @@
 </div>
 
 <script>
+    // 📱 เปิดใช้งานระบบลากวางและเลื่อนหน้าจอสำหรับมือถือ
+    MobileDragDrop.polyfill({
+        dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+    });
+
     // 🔗 URL ฝั่ง Google Apps Script ของคุณครู
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyqJo5Wda835wMOZWtMRbewN1qmSZzGP9dCTAxH30lFkVy7KazQvWWDONgJMsImaNFP/exec";
 
@@ -375,7 +382,7 @@
 
     // --- Drag & Drop Functions ---
     function dragStart() { 
-        if(isCheckingMode) return; // ล็อคไม่ให้ลากตอนเฉลย
+        if(isCheckingMode) return; 
         draggedItem = this; 
         setTimeout(() => this.style.display = 'none', 0); 
     }
@@ -401,14 +408,12 @@
         }
     }
 
-    // --- ควบคุมปุ่มกด (สลับระหว่าง ตรวจคำตอบ กับ ไปด่านต่อไป) ---
+    // --- ควบคุมปุ่มกด ---
     function handleActionBtn() {
         if (isCheckingMode) {
-            // ถ้าอยู่ในโหมดเฉลยแล้วพอกดปุ่ม ให้เปลี่ยนด่าน
             currentLevel++;
             loadLevel();
         } else {
-            // ถ้ายังไม่ตรวจ ให้ทำการตรวจคำตอบ
             checkAnswerAndShowSolution();
         }
     }
@@ -431,7 +436,6 @@
         const rows = document.querySelectorAll('.fc-row');
         const normalZones = dropzones.filter(z => !z.closest('.fc-row'));
 
-        // 1. ตรวจช่องที่เป็นเส้นตรงปกติ
         normalZones.forEach(zone => {
             const block = zone.querySelector('.block');
             const correctAns = zone.dataset.correct.trim();
@@ -443,30 +447,25 @@
             }
         });
 
-        // 2. ตรวจช่องที่แยกซ้าย-ขวา (Smart Check)
         rows.forEach(row => {
             const cols = row.querySelectorAll('.fc-col');
             if(cols.length === 2) {
                 const zonesL = Array.from(cols[0].querySelectorAll('.fc-dropzone'));
                 const zonesR = Array.from(cols[1].querySelectorAll('.fc-dropzone'));
                 
-                // หาคะแนนแบบวางตรงๆ
                 let scoreNormal = 0;
                 zonesL.forEach(z => { if(z.querySelector('.block').innerText.trim() === z.dataset.correct.trim()) scoreNormal++; });
                 zonesR.forEach(z => { if(z.querySelector('.block').innerText.trim() === z.dataset.correct.trim()) scoreNormal++; });
 
-                // หาคะแนนแบบสลับซ้าย-ขวา
                 let scoreSwapped = 0;
                 zonesL.forEach((z, idx) => { if(z.querySelector('.block').innerText.trim() === zonesR[idx].dataset.correct.trim()) scoreSwapped++; });
                 zonesR.forEach((z, idx) => { if(z.querySelector('.block').innerText.trim() === zonesL[idx].dataset.correct.trim()) scoreSwapped++; });
 
                 if (scoreNormal >= scoreSwapped) {
-                    // ตรวจแบบปกติ
                     zonesL.forEach(z => checkAndMarkZone(z, z.dataset.correct.trim()));
                     zonesR.forEach(z => checkAndMarkZone(z, z.dataset.correct.trim()));
                     levelScore += scoreNormal;
                 } else {
-                    // ตรวจแบบอนุโลมให้สลับซ้ายขวาได้
                     zonesL.forEach((z, idx) => checkAndMarkZone(z, zonesR[idx].dataset.correct.trim()));
                     zonesR.forEach((z, idx) => checkAndMarkZone(z, zonesL[idx].dataset.correct.trim()));
                     levelScore += scoreSwapped;
@@ -475,18 +474,15 @@
         });
 
         totalScore += levelScore;
-        isCheckingMode = true; // เปิดโหมดล็อคการลากและแสดงเฉลย
+        isCheckingMode = true;
 
-        // เปลี่ยนปุ่มเป็น ไปด่านต่อไป
         const btn = document.getElementById('actionBtn');
         btn.innerText = `ไปด่านต่อไป ⏭️ (ทำได้ ${levelScore} / ${dropzones.length} คะแนน)`;
         btn.className = "btn btn-warning";
         
-        // ล็อคไม่ให้ลากบล็อกได้อีก
         document.querySelectorAll('.block').forEach(b => b.draggable = false);
     }
 
-    // ฟังก์ชันย่อยสำหรับเช็คและใส่สีลงไปในบล็อก
     function checkAndMarkZone(zone, expectedAns) {
         const block = zone.querySelector('.block');
         if (block.innerText.trim() === expectedAns) {
@@ -529,7 +525,7 @@
         fetch(WEB_APP_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // ใช้ text/plain ไม่ให้ติด CORS
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ name: name, studentClass: sClass, studentNumber: sNum, score: score, maxScore: maxScore })
         }).then(() => {
             statusText.innerText = "✅ บันทึกข้อมูลเข้าฐานข้อมูลสำเร็จ!";
